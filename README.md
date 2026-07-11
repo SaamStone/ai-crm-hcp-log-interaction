@@ -2,7 +2,7 @@
 
 > A pharmaceutical CRM screen where a **sales rep never fills the form manually** — every field is populated, corrected, and managed exclusively through a **natural-language AI chat assistant** powered by **LangGraph + Groq**.
 
-![Split Screen](https://img.shields.io/badge/Layout-Split%20Screen-blue) ![LangGraph](https://img.shields.io/badge/Agent-LangGraph-orange) ![Groq](https://img.shields.io/badge/LLM-Groq%20gemma2--9b--it-green) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-teal) ![React](https://img.shields.io/badge/Frontend-React%2019-blue)
+![Split Screen](https://img.shields.io/badge/Layout-Split%20Screen-blue) ![LangGraph](https://img.shields.io/badge/Agent-LangGraph-orange) ![Groq](https://img.shields.io/badge/LLM-Groq%20llama--3.3--70b-green) ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-teal) ![React](https://img.shields.io/badge/Frontend-React%2019-blue)
 
 ---
 
@@ -25,113 +25,94 @@ This is a **split-screen CRM module** with two panels:
 | **Frontend** | React 19, Redux Toolkit, Vite |
 | **Backend** | FastAPI, SQLAlchemy, SQLite (swappable to Postgres/MySQL) |
 | **AI Agent** | LangGraph (ReAct graph), LangChain Groq |
-| **LLM** | Groq — `gemma2-9b-it` |
+| **LLM** | Groq — `llama-3.3-70b-versatile` |
 | **Session State** | In-memory per-session conversation history |
 
 ---
 
-## 🔧 The 5 LangGraph Tools
+## 🚀 Quick Start (Recommended)
 
-All tools are defined in `backend/app/agent/tools.py` and wired into a **LangGraph StateGraph** in `backend/app/agent/graph.py`.
-
-### 1. `log_interaction` — *Fill form from natural language*
-Extracts every field from a free-text description of a visit or call and populates the form automatically. Never invents data — only fills what the user actually mentioned.
-
-> **Example:** *"Met Dr. Priya Rao yesterday at 3pm, discussed Insulin therapy, she was very receptive"*
-
----
-
-### 2. `edit_interaction` — *Correct specific fields without touching the rest*
-When the rep spots a mistake, they tell the AI in plain English. The tool updates **only** the named fields and leaves everything else exactly as it was.
-
-> **Example:** *"Sorry, the name was actually John and the sentiment was negative"*
-
----
-
-### 3. `lookup_hcp` — *Validate & auto-correct HCP names*
-Fuzzy-matches a (possibly misspelled) name against the HCP master directory and sets the canonical, correctly-spelled name in the form. Asks the rep to disambiguate if multiple matches exist.
-
-> **Example:** *"Was it Dr. Prya Rao from Care Hospitals?"*
-
----
-
-### 4. `manage_materials_samples` — *Track materials & samples*
-Appends brochures, leave-behind literature, and drug sample distributions to the interaction record. Items are only ever added — never overwritten or removed.
-
-> **Example:** *"I also left a Cardizem brochure and gave 2 sample packs of Metformin"*
-
----
-
-### 5. `suggest_follow_up` — *AI-generated next-best-action*
-Writes a smart follow-up recommendation into the Follow-up Actions field, adapting its suggestion based on the captured sentiment and discussion topics.
-
-- **Positive sentiment** → Schedule a follow-up meeting within 2 weeks
-- **Negative sentiment** → Escalate to Medical Affairs
-- **Neutral sentiment** → Send follow-up email with supporting literature
-
-> **Example:** *"What should I do next?"*
-
----
-
-## 🚀 Setup & Running
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- A [Groq API key](https://console.groq.com/keys)
-
----
-
-### Backend Setup
+### Step 1 — Clone the repo
 
 ```bash
+git clone https://github.com/SaamStone/ai-crm-hcp-log-interaction.git
+cd ai-crm-hcp-log-interaction
+```
+
+### Step 2 — Get a free Groq API key
+
+Sign up at **https://console.groq.com/keys** and create an API key. It's free.
+
+### Step 3 — Configure the backend
+
+```bash
+# Windows
 cd backend
+copy .env.example .env
+```
 
-# 1. Create and activate virtual environment (optional but recommended)
-python -m venv venv
-venv\Scripts\activate        # Windows
-# source venv/bin/activate   # Mac/Linux
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Create your .env file
+```bash
+# Mac / Linux
+cd backend
 cp .env.example .env
-# Edit .env and add your Groq API key:
-# GROQ_API_KEY=your_key_here
+```
 
-# 4. Start the backend server
+Now open `backend/.env` in any text editor and replace `your_groq_api_key_here` with your real key:
+
+```
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_MODEL=llama-3.3-70b-versatile
+DATABASE_URL=sqlite:///./hcp_crm.db
+CORS_ORIGINS=http://localhost:5173
+```
+
+### Step 4 — Install backend dependencies
+
+```bash
+# From the backend/ directory
+pip install -r requirements.txt
+```
+
+### Step 5 — Install frontend dependencies
+
+```bash
+# From the frontend/ directory
+cd ../frontend
+npm install
+```
+
+### Step 6 — Run both servers
+
+Open **two separate terminals**:
+
+**Terminal 1 — Backend:**
+```bash
+cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-Backend will be live at **http://localhost:8000**
-- API docs: **http://localhost:8000/docs**
-
----
-
-### Frontend Setup
-
+**Terminal 2 — Frontend:**
 ```bash
 cd frontend
-
-# 1. Install dependencies
-npm install
-
-# 2. Start the dev server
 npm run dev
 ```
 
-Frontend will be live at **http://localhost:5173**
+### Step 7 — Open the app
+
+Open **http://localhost:5173** in your browser. ✅
+
+> ⚠️ Do **not** open http://localhost:8000 — that is the API server, not the UI.
 
 ---
 
-### Running End-to-End
+## 📋 Prerequisites
 
-1. Start the **backend** in one terminal (`uvicorn app.main:app --reload --port 8000`)
-2. Start the **frontend** in another terminal (`npm run dev`)
-3. Open **http://localhost:5173** in your browser
-4. Use the **AI Assistant** panel on the right to describe an HCP interaction
-5. Watch the **form on the left** fill itself automatically!
+| Tool | Minimum Version | Download |
+|---|---|---|
+| Python | 3.10+ | https://python.org |
+| Node.js | 18+ | https://nodejs.org |
+| npm | comes with Node.js | — |
+| Groq API key | free | https://console.groq.com/keys |
 
 ---
 
@@ -148,6 +129,20 @@ Positive sentiment overall."
 
 "Also add a Metformin sample to the record."
 ```
+
+---
+
+## 🔧 The 5 LangGraph Tools
+
+All tools are defined in `backend/app/agent/tools.py` and wired into a **LangGraph StateGraph** in `backend/app/agent/graph.py`.
+
+| Tool | Purpose |
+|---|---|
+| `log_interaction` | Extract every field from a free-text description and populate the form |
+| `edit_interaction` | Correct specific fields without touching the rest |
+| `lookup_hcp` | Fuzzy-match & validate HCP names against the directory |
+| `manage_materials_samples` | Track brochures, leave-behinds and drug samples |
+| `suggest_follow_up` | Generate a smart next-best-action recommendation |
 
 ---
 
@@ -168,7 +163,7 @@ hcp-crm/
 │   │   ├── database.py         # DB engine & session
 │   │   └── seed.py             # Sample HCP directory data
 │   ├── requirements.txt
-│   └── .env.example
+│   └── .env.example            # ← copy this to .env and add your API key
 │
 └── frontend/
     ├── src/
@@ -192,12 +187,25 @@ hcp-crm/
 
 | Variable | Description | Default |
 |---|---|---|
-| `GROQ_API_KEY` | Your Groq API key (required) | — |
-| `GROQ_MODEL` | Groq model to use | `gemma2-9b-it` |
+| `GROQ_API_KEY` | Your Groq API key — **required** | — |
+| `GROQ_MODEL` | Groq model to use | `llama-3.3-70b-versatile` |
 | `DATABASE_URL` | SQLAlchemy DB URL | `sqlite:///./hcp_crm.db` |
 | `CORS_ORIGINS` | Allowed frontend origins | `http://localhost:5173` |
 
 ---
 
+## 🐛 Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `{"detail":"Not Found"}` in browser | You opened port 8000. Open **http://localhost:5173** instead |
+| `GROQ_API_KEY is not set` error | You forgot to create `backend/.env` — copy from `.env.example` and add your key |
+| `500 Internal Server Error` on chat | Check that your Groq API key is valid at https://console.groq.com/keys |
+| Frontend shows blank page | Make sure `npm install` was run in the `frontend/` directory |
+| Port already in use | Kill the existing process or use a different port |
+
+---
+
 ## 📄 License
+
 MIT
