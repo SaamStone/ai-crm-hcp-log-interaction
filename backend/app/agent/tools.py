@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 The five LangGraph tools that drive the Log HCP Interaction screen.
 
 Every tool operates on a single shared `form` dict (a mirror of the React/Redux
@@ -45,8 +46,8 @@ def build_tools(form: dict, changed: list[str], hcp_directory: list[dict]):
         time: Optional[str] = None,
         attendees: Optional[str] = None,
         topics_discussed: Optional[str] = None,
-        materials_shared: Optional[list[str]] = None,
-        samples_distributed: Optional[list[str]] = None,
+        materials_shared: Optional[str | list[str]] = None,
+        samples_distributed: Optional[str | list[str]] = None,
         sentiment: Optional[str] = None,
         outcomes: Optional[str] = None,
         follow_up_actions: Optional[str] = None,
@@ -79,10 +80,12 @@ def build_tools(form: dict, changed: list[str], hcp_directory: list[dict]):
                 touched.append(key)
 
         if materials_shared:
-            form["materials_shared"] = list(dict.fromkeys(form.get("materials_shared", []) + materials_shared))
+            ms = [materials_shared] if isinstance(materials_shared, str) else list(materials_shared)
+            form["materials_shared"] = list(dict.fromkeys(form.get("materials_shared", []) + ms))
             touched.append("materials_shared")
         if samples_distributed:
-            form["samples_distributed"] = list(dict.fromkeys(form.get("samples_distributed", []) + samples_distributed))
+            sd = [samples_distributed] if isinstance(samples_distributed, str) else list(samples_distributed)
+            form["samples_distributed"] = list(dict.fromkeys(form.get("samples_distributed", []) + sd))
             touched.append("samples_distributed")
 
         changed.extend(touched)
@@ -147,17 +150,37 @@ def build_tools(form: dict, changed: list[str], hcp_directory: list[dict]):
         specialty/hospital, or resolve ambiguity before/after logging. If
         exactly one high-confidence match is found, this automatically sets
         the HCP Name field to the canonical, correctly-spelled name.
+        Handles short partial names (e.g. 'sai', 'priya', 'john') via
+        substring matching as well as fuzzy similarity scoring.
         """
+        query_lower = name_query.lower().strip()
+
+        # Priority 1: substring match (handles short first-name queries like "sai")
+        substring_matches = [
+            h for h in hcp_directory
+            if query_lower in h["name"].lower()
+        ]
+        if len(substring_matches) == 1:
+            best = substring_matches[0]
+            form["hcp_name"] = best["name"]
+            changed.append("hcp_name")
+            return f"Matched to {best['name']} ({best['specialty']}, {best['hospital']}). HCP Name field set to this canonical name."
+        if len(substring_matches) > 1:
+            options = "; ".join(f"{h['name']} ({h['specialty']})" for h in substring_matches[:3])
+            return f"Multiple possible matches found: {options}. Ask the user which one they mean."
+
+        # Priority 2: fuzzy similarity (handles misspellings)
         scored = sorted(
             ({**h, "score": _similar(name_query, h["name"])} for h in hcp_directory),
             key=lambda h: h["score"],
             reverse=True,
         )
-        top = [h for h in scored if h["score"] > 0.45][:3]
+        # Lower threshold to 0.35 to catch short-name fuzzy hits
+        top = [h for h in scored if h["score"] > 0.35][:3]
         if not top:
             return f"No HCP matching '{name_query}' was found in the directory. Ask the user to confirm the spelling, or proceed treating it as a new HCP."
 
-        if len(top) == 1 or top[0]["score"] - (top[1]["score"] if len(top) > 1 else 0) > 0.2:
+        if len(top) == 1 or top[0]["score"] - (top[1]["score"] if len(top) > 1 else 0) > 0.15:
             best = top[0]
             form["hcp_name"] = best["name"]
             changed.append("hcp_name")
