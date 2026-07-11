@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "gemma2-9b-it"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     DATABASE_URL: str = "sqlite:///./hcp_crm.db"
     CORS_ORIGINS: str = "http://localhost:5173"
 
